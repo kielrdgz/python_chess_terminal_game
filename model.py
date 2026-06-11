@@ -42,6 +42,10 @@ class ChessModel:
     @property
     def empty(self) -> str:
         return self._empty
+
+    @property
+    def turn(self) -> ChessColor:
+        return self._turn
     
     @property
     def grid(self) -> list[list[ChessPiece]]:
@@ -119,12 +123,12 @@ class ChessModel:
         return None
 
     def get_last_opp_move(self) -> ChessMove | None:
-        prev = self._moves_done[self._turn.opponent]
+        prev = self._moves_done[self.turn.opponent]
         return prev[-1] if prev else None
     
     def play_move(self, piece: ChessPiece, target_coord: tuple[int, int]) -> bool:
         last_opp_move = self.get_last_opp_move()
-        valid_moves = piece.get_valid_moves(self._grid, last_opp_move, self.is_attack)
+        valid_moves = piece.get_valid_moves(self.grid, last_opp_move, self.is_attack)
 
         if target_coord not in valid_moves: # invalid move
             return False
@@ -193,7 +197,7 @@ class ChessModel:
     def find_king(self, color: ChessColor) -> tuple[int, int]:
         for r in range(8):
             for c in range(8):
-                p = self._grid[r][c]
+                p = self.grid[r][c]
                 if p.piece_id == "King" and p.color == color:
                     return (r, c)
         return (0, 0)
@@ -203,9 +207,9 @@ class ChessModel:
 
         for r in range(8):
             for c in range(8):
-                piece = self._grid[r][c]
+                piece = self.grid[r][c]
                 if not piece.is_empty and piece.color == color:
-                    valid = piece.get_valid_moves(self._grid, last_opp_move, self.is_attack)
+                    valid = piece.get_valid_moves(self.grid, last_opp_move, self.is_attack)
                     if valid: # there are valid moves left
                         return False 
         return True
