@@ -1,7 +1,7 @@
 # pyright: strict
 
 from enum import StrEnum, auto, Enum
-from typing import Protocol
+from typing import Protocol, Any
 
 class ChessColor(StrEnum):
     WHITE = "WHITE"
@@ -34,14 +34,14 @@ class Player(Protocol):
     def is_ai(self) -> bool:
         ...
 
-class ChessPieceProtocol:
-    @property
-    def is_empty(self) -> bool:
-        ...
+# class BaseChessPiece:
+#     @property
+#     def is_empty(self) -> bool:
+#         ...
 
-    @property
-    def color(self) -> ChessColor:
-        ...
+#     @property
+#     def color(self) -> ChessColor:
+#         ...
 
 class ChessPiece:
     def __init__(self, coord: tuple[int, int], piece_id: str, color: ChessColor) -> None:
@@ -58,7 +58,7 @@ class ChessPiece:
     def color(self) -> ChessColor:
         return self._color
     
-    def get_valid_moves(self, grid: list[list[ChessPiece]]) -> set[tuple[int, int]]:
+    def get_valid_moves(self, grid: list[list[ChessPiece]], last_move: ChessMove | None = None, is_attacked_fn: Any = None) -> set[tuple[int, int]]:
         ...
     
     def move(self, to_coord: tuple[int, int]) -> None:
@@ -69,18 +69,13 @@ class ChessPiece:
         color = 'W' if self.color == ChessColor.WHITE else 'B'
         return f"{color}_{self.piece_id}"
     
-class EmptyPiece:
-    def __init__(self, r: int, c: int) -> None:
-        self.r = r
-        self.c = c
+class EmptyPiece(ChessPiece):
+    def __init__(self, coord: tuple[int, int], piece_id: str) -> None:
+        super().__init__(coord, piece_id, ChessColor.NA)
     
     @property
     def is_empty(self) -> bool:
         return True
-    
-    @property
-    def color(self) -> ChessColor:
-        return ChessColor.NA
 
 class ChessMove:
     def __init__(self, piece: str, _from: tuple[int, int], 
@@ -132,53 +127,113 @@ class ChessMove:
         
         return notation
 
-def move_finder(coords: tuple[int, int], directions: list[tuple[int, int]], grid: list[list[ChessPiece]], opp_color: ChessColor) -> set[tuple[int, int]]:
+def move_finder(coords: tuple[int, int], directions: list[tuple[int, int]], grid: list[list[ChessPiece]], opp_color: ChessColor, repeat: bool = True) -> set[tuple[int, int]]:
     moves: set[tuple[int, int]] = set()
     r, c = coords
 
-    for dr, dc in directions:
-        nr, nc = r + dr, c + dc
-        while 0 <= nr < 8 and 0 <= nc < 8: # hard coded but chess board won't change size anw
-            target: ChessPieceProtocol = grid[nr][nc]
-            if target.is_empty:
-                moves.add((nr, nc))
-            elif target.color == opp_color:
-                moves.add((nr, nc)) # can take piece
-                break
-            else:
-                break
-            # break: stop finding new pieces
-            nr += dr
-            nc += dc
-    
-    return moves
+    if repeat:
+        for dr, dc in directions:
+            nr, nc = r + dr, c + dc
+            while 0 <= nr < 8 and 0 <= nc < 8: # hard coded but chess board won't change size anw
+                target: ChessPiece = grid[nr][nc]
+                if target.is_empty:
+                    moves.add((nr, nc))
+                elif target.color == opp_color:
+                    moves.add((nr, nc)) # can take piece
+                    break
+                else:
+                    break
+                # break: stop finding new pieces
+                nr += dr
+                nc += dc
+        
+        return moves
+    else:
+        for dr, dc in directions:
+            nr, nc = r + dr, c + dc
+            if 0 <= nr < 8 and 0 <= nc < 8:
+                target: ChessPiece = grid[nr][nc]
+                if target.is_empty or target.color == opp_color:
+                    moves.add((nr, nc))
+        
+        return moves
     
 class RookPiece(ChessPiece):
-    def get_valid_moves(self, grid: list[list[ChessPiece]]) -> set[tuple[int, int]]:
+    def get_valid_moves(self, grid: list[list[ChessPiece]], last_move: ChessMove | None = None, is_attacked_fn: Any = None) -> set[tuple[int, int]]:
         directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
 
         return move_finder((self.r, self.c), directions, grid, self.color.opponent())
 
 class QueenPiece(ChessPiece):
-    def get_valid_moves(self, grid: list[list[ChessPiece]]) -> set[tuple[int, int]]:
+    def get_valid_moves(self, grid: list[list[ChessPiece]], last_move: ChessMove | None = None, is_attacked_fn: Any = None) -> set[tuple[int, int]]:
         directions =  [(1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1)]
 
         return move_finder((self.r, self.c), directions, grid, self.color.opponent())
 
 class KnightPiece(ChessPiece):
-    def get_valid_moves(self, grid: list[list[ChessPiece]]) -> set[tuple[int, int]]:
-        moves: set[tuple[int, int]] = set()
+    def get_valid_moves(self, grid: list[list[ChessPiece]], last_move: ChessMove | None = None, is_attacked_fn: Any = None) -> set[tuple[int, int]]:
         directions = [(2, 1), (2, -1), (-2, 1), (-2, -1), (1, 2), (1, -2), (-1, 2), (-1, -2)]
 
-        for dr, dc in directions:
-            nr, nc = self.r + dr, self.c + dc
-            if 0 <= nr < 8 and 0 <= nc < 8:
-                target = grid[nr][nc]
-                if target.is_empty or target.color == self.color.opponent():
-                    moves.add((nr, nc))
+        return move_finder((self.r, self.c), directions, grid, self.color.opponent(), repeat=False)
 
-        return moves
+class BishopPiece(ChessPiece):
+    def get_valid_moves(self, grid: list[list[ChessPiece]], last_move: ChessMove | None = None, is_attacked_fn: Any = None) -> set[tuple[int, int]]:
+        directions = [(1, 1), (1, -1), (-1, 1), (-1, -1)]
+
+        return move_finder((self.r, self.c), directions, grid, self.color.opponent())
 
 class PawnPiece(ChessPiece):
-    def get_valid_moves(self, grid: list[list[ChessPiece]]) -> set[tuple[int, int]]:
+    def get_valid_moves(self, grid: list[list[ChessPiece]], last_move: ChessMove | None = None, is_attacked_fn: Any = None) -> set[tuple[int, int]]:
+        moves: set[tuple[int, int]] = set()
+        direction = -1 if self.color == ChessCOlor.WHITE else 1
+
+        next_r = self.r + direction
+        if 0 <= next_r < 8 and grid[next_r][self.c].is_empty:
+            moves.add((next_r, self.c))
+            
+            # handle first 2 step of pawn
+            start_r = 6 if self.color == ChessColor.WHITE else 1
+            two_step = self.r + (2 * direction)
+            if self.r == start_r and grid[two_step][self.c].is_empty:
+                moves.add(two_step, self.c)
+
+        for dc in [-1, 1]:
+            next_c = self.c + dc
+            if 0 <= next_r < 8 and 0 <= next_c < 8:
+                target: ChessPiece = grid[next_r][next_c]
+                if not target.is_empty and target.color == self.color.opponent():
+                    moves.add((next_r, next_c))
+
+                # handle en passant
+                if target.is_empty and last_move is not None:
+                    adj_piece = grid[self.r][next_c] 
+                    if not adj_piece.is_empty and adj_piece.piece_id.startswith("Pawn") and adj_piece.color == self.color.oppoennt() and last_move._to == (self.r, next_c) and abs(last_move._from[0] - last_move.to[0]) == 2:
+                        moves.add((next_r, next_c))
         
+        return moves
+
+class KingPiece(ChessPiece):
+    def get_valid_moves(self, grid: list[list[ChessPiece]], last_move: ChessMove | None = None, is_attacked_fn: Any = None) -> set[tuple[int, int]]:
+        directions = [(1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1)]
+
+        moves: set[tuple[int, int]] = move_finder((self.r, self.c), directions, grid, self.color.opponent(), repeat=False)
+
+        if not self._has_moved and is_attacked_fn is not None:
+            opp_color = self.color.opponent()
+
+            if not is_attacked_fn(self.r, self.c, opp_color):
+                if grid[self.r][self.c + 1].is_empty and grid[self.r][self.c + 2].is_empty:
+                    rook = grid[self.r][7]
+                    if not rook.is_empty and not rook._has_moved and rook.piece_id.startswith("Rook") and not is_attacked_fn(self.r, self.c + 1, opp_color) and not is_attacked_fn(self.r, self.c + 2, opp_color):
+                        moves.add((self.r, self.c + 2))
+                
+                if grid[self.r][self.c - 1].is_empty and grid[self.r][self.c - 2].is_empty and grid[self.r][self.c - 3].is_empty:
+                    rook = grid[self.r][0]
+                    if not rook.is_empty and not rook._has_moved and rook.piece_id.startswith("Rook") and not is_attacked_fn(self.r, self.c - 1, opp_color) and not is_attacked_fn(self.r, self.c - 2, opp_color):
+                        moves.add((self.r, self.c - 2))
+        
+        return moves
+
+
+
+
