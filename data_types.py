@@ -74,8 +74,8 @@ class ChessNormalEnemy:
         return self._color
     
     def get_move(self, grid: list[list[ChessPiece]],
-                 last_moves: ChessMove | None = None,
-                 is_attack_fn: Any) -> tuple[ChessPiece, tuple[int, int]] | None:
+                 is_attack_fn: Any,
+                 last_moves: ChessMove | None = None) -> tuple[ChessPiece, tuple[int, int]] | None:
         legal_moves: list[tuple[ChessPiece, tuple[int, int]]] = []
         captures: list[tuple[ChessPiece, tuple[int, int]]] = []
 

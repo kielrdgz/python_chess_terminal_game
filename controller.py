@@ -35,7 +35,7 @@ def ChessModel_factory(args: tuple[str, str], view: ChessView) -> ChessModel:
     # player chooses color
     if turn_base == 'choose':
         turn = view.configure_turn()
-        if t != 1:
+        if turn != 1:
             chosen = 'black'
     # random color given
     else:
@@ -78,15 +78,15 @@ class ChessController:
         while not model.gameover:
             curr_turn = model.turn
             view.display_turn(curr_turn)
-            view.display_board(model.get_view_grid(), curr_turn, model.empty, model.row)
+            view.display_grid(model.get_view_grid(), curr_turn, model.empty)
             
             active_player = model.active_player
             target_piece = None
-            target_coord = None # placeholder
+            target_coord = (-1, -1) # placeholder
             last_opp_move = model.get_last_opp_move()
 
             if active_player.is_ai:
-                ai_move = active_player.get_move(model.grid, last_opp_move, model.is_attack)
+                ai_move = active_player.get_move(model.grid, model.is_attack, last_opp_move)
                 if ai_move is None:
                     print('This should not print')
                     print('If this prints, game should be over')
@@ -102,14 +102,14 @@ class ChessController:
                         continue
                     
                     valid_moves = target_piece.get_valid_moves(model.grid, last_opp_move, model.is_attack)
-                    r, c = view.ask_for_move(valid_moves, model.row, model.col)
+                    r, c = view.ask_for_move(valid_moves)
                     if -1 in (r, c):
                         continue # cancel move
                     
                     target_coord = (r, c)
                     break   
 
-            if target_piece and target_coord is not None:
+            if target_piece and target_coord != (-1, -1):
                 tr, tc = target_coord
                 target = model.grid[tr][tc]
                 is_capture = not target.is_empty
@@ -117,7 +117,7 @@ class ChessController:
 
                 if success:
                     last_move = model.moves_done[curr_turn][-1]
-                    view.display_board(model.get_view_grid(), model.turn, model.empty, model.row)
+                    view.display_board(model.get_view_grid(), model.turn, model.empty)
                     view.display_move(last_move, tr, tc, target, is_capture)
         
         view.display_winner(model.winner)
