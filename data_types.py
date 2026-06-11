@@ -2,6 +2,7 @@
 
 from enum import StrEnum, auto, Enum
 from typing import Protocol, Any
+import random
 
 class ChessColor(StrEnum):
     WHITE = "WHITE"
@@ -35,6 +36,69 @@ class Player(Protocol):
     @property
     def is_ai(self) -> bool:
         ...
+
+    @property
+    def color(self) -> ChessColor:
+        return self._color
+    
+class ChessPlayer:
+    def __init__(self, color: ChessColor, name: str) -> None:
+        self._color = color
+        self._name = name
+
+    def name(self) -> str:
+        return self._name
+    
+    @property
+    def is_ai(self) -> bool:
+        return False
+    
+    @property
+    def color(self) -> ChessColor:
+        return self._color
+    
+class ChessNormalEnemy:
+    def __init__(self, color: ChessColor, name: str) -> None:
+        self._color = color
+        self._name = name
+
+    def name(self) -> str:
+        return self._name
+    
+    @property
+    def is_ai(self) -> bool:
+        return False
+    
+    @property
+    def color(self) -> ChessColor:
+        return self._color
+    
+    def get_move(self, grid: list[list[ChessPiece]],
+                 last_moves: ChessMove | None = None,
+                 is_attack_fn: Any) -> tuple[ChessPiece, tuple[int, int]] | None:
+        legal_moves: list[tuple[ChessPiece, tuple[int, int]]] = []
+        captures: list[tuple[ChessPiece, tuple[int, int]]] = []
+
+        for row in grid:
+            for piece in row:
+                if not piece.is_empty and piece.color == self.color:
+                    valid_moves = piece.get_valid_moves(grid, last_moves, is_attack_fn)
+                    for coord in valid_moves:
+                        move = (piece, coord)
+                        legal_moves.append(move)
+
+                        r, c = coord
+                        target = grid[r][c]
+                        if not target.is_empty and target.color == self.color.opponent:
+                            captures.append(move)
+
+        if not legal_moves:
+            return None
+        
+        if captures:
+            return random.choice(captures) # ai prioritizes capture
+        return random.choice(legal_moves)
+
 
 # class BaseChessPiece:
 #     @property

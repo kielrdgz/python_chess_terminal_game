@@ -48,13 +48,42 @@ class ChessModel:
         return self._turn
     
     @property
+    def opp_color(self) -> ChessColor:
+        return self._turn.opponent
+    
+    @property
     def grid(self) -> list[list[ChessPiece]]:
         return deepcopy(self._grid)
     
+    @property
+    def gameover(self) -> bool:
+        opp_color = self.opp_color
+        king_coord = self.find_king(opp_color)
+        is_check = self.is_attack(*king_coord, self.turn)
+        is_mate = is_check and self.verify_checkmate(opp_color)
+
+        if is_mate or "King" not in self._pieces[opp_color]:
+            self._gameover = True
+            self._winner = self.turn
+
+        return self._gameover
+    
+    @property
+    def winner(self) -> ChessColor | None:
+        if not self.gameover: # illegal move
+            raise AssertionError
+        
+        return self._winner 
+    
+    @property
+    def active_player(self) -> Player:
+        return self._white_player if self.turn == ChessColor.WHITE else self._black_player
+    
     def _assign_players(self, p1: Player, p2: Player, chosen: str) -> None:
-        if chosen.lower() == "white":
+        ch = chosen.lower()
+        if ch == "white":
             self._white_player, self._black_player = p1, p2
-        elif chosen.lower() == "black":
+        elif ch.lower() == "black":
             self._white_player, self._black_player = p2, p1
         else:
             if random.choice([True, False]):
@@ -66,7 +95,7 @@ class ChessModel:
         final: list[list[ChessPiece]] = [[EmptyPiece((r, c), self.empty) for c in range(8)] for r in range(8) ]
 
         for c in range(8):
-            final[6][c] = PawnPiece((1, c), f"Pawn{c + 1}", ChessColor.WHITE)
+            final[6][c] = PawnPiece((6, c), f"Pawn{c + 1}", ChessColor.WHITE)
             final[1][c] = PawnPiece((1, c), f"Pawn{c + 1}", ChessColor.BLACK)
         
         back: list[type[ChessPiece]] = [RookPiece, KnightPiece, BishopPiece, QueenPiece, KingPiece, BishopPiece, KnightPiece, RookPiece]
@@ -96,7 +125,7 @@ class ChessModel:
         white_pov: bool = True
 
         if self.is_pvp:
-            white_pov = (self._turn == ChessColor.WHITE)
+            white_pov = (self.turn == ChessColor.WHITE)
         else:
             white_pov = not self._white_player.is_ai
         
@@ -117,18 +146,22 @@ class ChessModel:
     def find_piece(self, id: str) -> ChessPiece | None:
         for row in self._grid: # needs og piece
             for piece in row:
-                if not piece.is_empty and piece.color == self._turn:
+                if not piece.is_empty and piece.color == self.turn:
                     if piece.piece_id.lower() == id.lower():
                         return piece
         return None
 
+    @property
+    def moves_done(self) -> dict[ChessColor, list[ChessMove]]:
+        return deepcopy(self._moves_done)
+
     def get_last_opp_move(self) -> ChessMove | None:
-        prev = self._moves_done[self.turn.opponent]
+        prev = self._moves_done[self.opp_color]
         return prev[-1] if prev else None
     
     def play_move(self, piece: ChessPiece, target_coord: tuple[int, int]) -> bool:
         last_opp_move = self.get_last_opp_move()
-        valid_moves = piece.get_valid_moves(self.grid, last_opp_move, self.is_attack)
+        valid_moves = piece.get_valid_moves(self._grid, last_opp_move, self.is_attack)
 
         if target_coord not in valid_moves: # invalid move
             return False
@@ -174,24 +207,15 @@ class ChessModel:
         
         piece.move(target_coord)
         self._grid[tr][tc] = piece
-        self._grid[fr][fc] = EmptyPiece((fr, fc), self._empty)
+        self._grid[fr][fc] = EmptyPiece((fr, fc), self.empty)
 
         if move == MoveType.PROMOTE:
             self._grid[tr][tc] = QueenPiece((tr, tc), f"Queen_Promoted_{tc}", piece.color)
-        
-        opp_color = self._turn.opponent
-        king_coord = self.find_king(opp_color)
-        is_check = self.is_attack(*king_coord, self._turn)
-        is_mate = is_check and self.verify_checkmate(opp_color)
 
         move_record = ChessMove(char, (fr, fc), target_coord, move, is_capture, is_check, is_mate)
-        self._moves_done[self._turn].append(move_record)
+        self._moves_done[self.turn].append(move_record)
+        self.turn = opp_color
 
-        if is_mate or "King" not in self._pieces[opp_color]:
-            self._gameover = True
-            self._winner = self._turn
-        
-        self._turn = opp_color
         return True
 
     def find_king(self, color: ChessColor) -> tuple[int, int]:
