@@ -21,15 +21,19 @@ class ChessModel:
         self._grid: list[list[ChessPiece]] = [[]]
         self._initialize_grid()
 
-        self._pieces: dict[str, list[str]] = {ChessColor.WHITE: [],
-                                              ChessColor.BLACK: [],}
-        # self._initialize_pieces()
+        self._pieces: dict[str, list[str]] = {
+            ChessColor.WHITE: [],
+            ChessColor.BLACK: [],
+        }
+        self._initialize_pieces()
 
         self._turn: ChessColor = ChessColor.WHITE
         self._gameover: bool = False
         self._winner: ChessColor | None = None
-        self._moves_done: dict[ChessColor, list[ChessMove]] = {ChessColor.WHITE: [],
-                                                               ChessColor.BLACK: [],}
+        self._moves_done: dict[ChessColor, list[ChessMove]] = {
+            ChessColor.WHITE: [],
+            ChessColor.BLACK: [],
+        }
         self.initializing: bool = True
 
     @property
@@ -116,14 +120,13 @@ class ChessModel:
         
         self._grid = final
     
-    def _initialize_piece(self) -> None:
+    def _initialize_pieces(self) -> None:
         if not self._grid:
             self._initialize_grid()
-
         for row in self.grid:
             for piece in row:
                 if not piece.is_empty:
-                    self._pieces[piece.color].append(piece.piece_id)
+                    self._pieces.setdefault(piece.color, []).append(piece.piece_id)
     
     @property
     def is_pvp(self) -> bool:
@@ -146,7 +149,7 @@ class ChessModel:
     def is_attack(self, row: int, col: int, opp_color: ChessColor) -> bool:
         for r in range(8):
             for c in range(8):
-                piece = self.grid[r][c]
+                piece = self._grid[r][c]
                 if not piece.is_empty and piece.color == opp_color:
                     if (row, col) in piece.get_valid_moves(self._grid, None, None):
                         return True
@@ -183,7 +186,7 @@ class ChessModel:
         char = piece.piece_id[0] if not piece.piece_id.startswith("Pawn") else "P"
 
         # castling
-        if piece.piece_id == "King" and abs(fc - tc) == 2:
+        if piece.piece_id.startswith("King") and abs(fc - tc) == 2:
             if tc > fc: # castle kingside
                 move = MoveType.CASTLE_KING
                 rook = self._grid[tr][7]
@@ -219,13 +222,22 @@ class ChessModel:
         self._grid[fr][fc] = EmptyPiece((fr, fc), self.empty)
 
         if move == MoveType.PROMOTE:
-            self._grid[tr][tc] = QueenPiece((tr, tc), f"Queen_Promoted_{tc}", piece.color)
+            new_id = f"Queen_Promoted_{tc}"
+            self._pieces[piece.color].append(new_id) # update self._pieces
+            if piece.piece_id in self._pieces[piece.color]:
+                self._pieces[piece.color].remove(piece.piece_id) 
+            self._grid[tr][tc] = QueenPiece((tr, tc), new_id, piece.color)
 
-        move_record = ChessMove(char, (fr, fc), target_coord, move, is_capture, is_check, is_mate)
-        self._moves_done[self.turn].append(move_record)
-        self.turn = opp_color
         if self.initializing:
             self.initializing = False
+
+        is_check = self.is_attack(*self.find_king(self.opp_color), self.turn)
+        is_mate = self.gameover
+        move_record = ChessMove(char, (fr, fc), target_coord, move, is_capture, is_check, is_mate)
+        self._moves_done[self.turn].append(move_record)
+
+        self._turn = self.opp_color
+        
         return True
 
     def find_king(self, color: ChessColor) -> tuple[int, int]:

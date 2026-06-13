@@ -103,6 +103,9 @@ class ChessController:
                         continue
                     
                     valid_moves = target_piece.get_valid_moves(model.grid, last_opp_move, model.is_attack)
+                    if not valid_moves:
+                        view.display_invalid_piece()
+                        continue
                     r, c = view.ask_for_move(valid_moves)
                     if -1 in (r, c):
                         continue # cancel move
@@ -118,7 +121,7 @@ class ChessController:
 
                 if success:
                     last_move = model.moves_done[curr_turn][-1]
-                    view.display_board(model.get_view_grid(), model.turn, model.empty)
+                    # view.display_grid(model.get_view_grid(), model.turn, model.empty)
                     view.display_move(last_move, tr, tc, target, is_capture)
         
         view.display_winner(model.winner, model.winner_player)

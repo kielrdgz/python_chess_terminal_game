@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 from collections.abc import Sequence
-from typing import Literal
+#from typing import Literal
 
 from data_types import *
 
@@ -90,37 +90,62 @@ class ChessView:
                 continue
             return matched
     
-    def ask_for_move(self, valid_moves: Set[Tuple[int, int]], grid_r: int, grid_c: int) -> Tuple[int, int]:
-        print(f'VALID MOVES: {valid_moves}')
+    def ask_for_move(self, valid_moves: set[tuple[int, int]]) -> tuple[int, int]:
+        readable_moves = sorted([self.coords_to_notation(mv) for mv in valid_moves])
+        print(f'VALID MOVES: {readable_moves}')
+        
+        col_ch = "abcdefgh"
+        row_lvl = "87654321"
+        
         while True:
-            r_in = input('Choose a valid row [-1: exit piece]: ').strip()
-            try:
-                r = int(r_in)
-            except ValueError:
-                print('Invalid input, try again.')
+            c_in = input('Choose a valid col (a-h) [-1: exit piece]: ').strip().lower()
+            if c_in == '-1':
+                return (-1, -1)
+            if c_in not in col_ch:
+                print('Invalid column letter, try again.')
                 continue
-            if r == -1 or 0 <= r < grid_r:
-                break
-            print('Out of bounds, try again.')
-            
-        if r == -1:
-            return (-1, -1)
-            
-        while True:
-            c_in = input('Choose a valid col [-1: exit piece]: ').strip()
-            try:
-                c = int(c_in)
-            except ValueError:
-                print('Invalid input, try again.')
+                
+            r_in = input('Choose a valid row/rank (1-8) [-1: exit piece]: ').strip().lower()
+            if r_in == '-1':
+                return (-1, -1)
+            if r_in not in row_lvl:
+                print('Invalid row rank digit, try again.')
                 continue
-            if c == -1 or 0 <= c < grid_c:
-                break
-            print('Out of bounds, try again.')
             
-        if c == -1: # cancel move
-            return (-1, -1)
+            notation = f"{c_in}{r_in}"
+            coords = self.notation_to_coords(notation)
             
-        return (r, c)
+            if coords is None or coords not in valid_moves:
+                print('Invalid. Try again.')
+                continue
+                
+            return coords
+    
+    def coords_to_notation(self, coord: tuple[int, int]) -> str:
+        r, c = coord
+        col_ch = "abcdefgh"
+        row_lvl = "87654321" 
+        if 0 <= r < 8 and 0 <= c < 8:
+            return f"{col_ch[c]}{row_lvl[r]}"
+        return f"({r},{c})"
+
+    def notation_to_coords(self, notation: str) -> tuple[int, int] | None:
+        notation = notation.strip().lower()
+        if len(notation) != 2:
+            return None
+            
+        col_ch = "abcdefgh"
+        row_lvl = "87654321"
+        
+        file_char, rank_char = notation[0], notation[1]
+        if file_char in col_ch and rank_char in row_lvl:
+            c = col_ch.index(file_char)
+            r = row_lvl.index(rank_char)
+            return (r, c)
+        return None
+    
+    def display_invalid_piece(self) -> None:
+        print(f"Chosen Chess Piece has no valid moves. Choose another Chess Piece")
 
     def configure_enemy(self, choices: dict[str, Any]) -> Any:
         print('CHOICES:')
@@ -147,7 +172,7 @@ class ChessView:
             return turn
     
     @property
-    def empty_board(self) -> Tuple[Tuple[str, ...], ...]:
+    def empty_board(self) -> tuple[tuple[str, ...], ...]:
         keys = ['█', '▒']
         row1 = tuple(keys[i % 2] for i in range(8))
         row2 = tuple(keys[(i + 1) % 2] for i in range(8))
@@ -155,7 +180,7 @@ class ChessView:
         final = tuple(choices[i % 2] for i in range(8))
         return final
 
-    def character_to_display(self) -> Dict[ChessColor, Dict[str, str]]:
+    def character_to_display(self) -> dict[ChessColor, dict[str, str]]:
         return {
             ChessColor.WHITE: {
                 'Q': '♛',
