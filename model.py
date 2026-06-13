@@ -16,20 +16,21 @@ class ChessModel:
         self._white_player: Player
         self._black_player: Player
         self._assign_players(p1, p2, chosen)
+        self._empty: str = empty 
 
         self._grid: list[list[ChessPiece]] = [[]]
         self._initialize_grid()
 
-        self._empty: str = empty 
-
-        self._pieces: dict[str, list[str]] = {} # key: players, values: pieces present
-        self._initialize_pieces()
+        self._pieces: dict[str, list[str]] = {ChessColor.WHITE: [],
+                                              ChessColor.BLACK: [],}
+        # self._initialize_pieces()
 
         self._turn: ChessColor = ChessColor.WHITE
         self._gameover: bool = False
         self._winner: ChessColor | None = None
         self._moves_done: dict[ChessColor, list[ChessMove]] = {ChessColor.WHITE: [],
-                                                   ChessColor.BLACK: [],}
+                                                               ChessColor.BLACK: [],}
+        self.initializing: bool = True
 
     @property
     def row(self) -> int:
@@ -58,11 +59,12 @@ class ChessModel:
     @property
     def gameover(self) -> bool:
         opp_color = self.opp_color
+        has_king = any("King" in piece_id or "K" == piece_id[0] for piece_id in self._pieces[opp_color])
         king_coord = self.find_king(opp_color)
         is_check = self.is_attack(*king_coord, self.turn)
         is_mate = is_check and self.verify_checkmate(opp_color)
 
-        if is_mate or "King" not in self._pieces[opp_color]:
+        if (is_mate or not has_king) and not self.initializing:
             self._gameover = True
             self._winner = self.turn
 
@@ -74,6 +76,13 @@ class ChessModel:
             raise AssertionError
         
         return self._winner 
+    
+    @property
+    def winner_player(self) -> str:
+        if not self.gameover:
+            raise AssertionError
+        
+        return self._black_player.name if self.winner == ChessColor.BLACK else self._white_player.name
     
     @property
     def active_player(self) -> Player:
@@ -215,7 +224,8 @@ class ChessModel:
         move_record = ChessMove(char, (fr, fc), target_coord, move, is_capture, is_check, is_mate)
         self._moves_done[self.turn].append(move_record)
         self.turn = opp_color
-
+        if self.initializing:
+            self.initializing = False
         return True
 
     def find_king(self, color: ChessColor) -> tuple[int, int]:

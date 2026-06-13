@@ -15,7 +15,7 @@ class ChessView:
         col_ch = 'abcdefgh'
 
         emoji_grid: list[list[str]] = []
-        style_board = self.empty_board()
+        styled_board = self.empty_board
 
         if self.styled:
             for r in range(8):
@@ -59,6 +59,10 @@ class ChessView:
     def display_turn(self, player_turn: ChessColor) -> None:
         print(f'Current Turn: {player_turn}')
 
+    def display_winner(self, winner: ChessColor, name: str) -> None:
+        print(f'Congratulations!')
+        print(f'Winner: < {winner} > {name}\n')
+
     def display_move(self, move: ChessMove, r: int, c: int, cell: ChessPiece, taken: bool) -> None:
         col_ch = 'abcdefgh'
         row_lvl = '87654321'
@@ -70,6 +74,10 @@ class ChessView:
 
         if taken and not cell.is_empty:
             print(f"{cell.piece_id} has been taken!")
+
+    def display_moves_done(self, moves_done: dict[ChessColor, list[ChessMove]]) -> None:
+        print(f'White: {moves_done[ChessColor.WHITE]}\n')
+        print(f'Black: {moves_done[ChessColor.BLACK]}')
     
     def ask_for_piece(self, valid_pieces: list[str]) -> str:
         while True:

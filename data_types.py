@@ -30,6 +30,7 @@ class MoveType(Enum):
     PROMOTE = auto()
 
 class Player(Protocol):
+    @property
     def name(self) -> str:
         ...
     
@@ -39,13 +40,14 @@ class Player(Protocol):
 
     @property
     def color(self) -> ChessColor:
-        return self._color
+        ...
     
 class ChessPlayer:
     def __init__(self, color: ChessColor, name: str) -> None:
         self._color = color
         self._name = name
 
+    @property
     def name(self) -> str:
         return self._name
     
@@ -62,6 +64,7 @@ class ChessNormalEnemy:
         self._color = color
         self._name = name
 
+    @property
     def name(self) -> str:
         return self._name
     
@@ -129,7 +132,6 @@ class ChessPiece:
     
     def move(self, to_coord: tuple[int, int]) -> None:
         ...
-    
 
     def __repr__(self) -> str:
         color = 'W' if self.color == ChessColor.WHITE else 'B'
@@ -251,7 +253,7 @@ class BishopPiece(ChessPiece):
 class PawnPiece(ChessPiece):
     def get_valid_moves(self, grid: list[list[ChessPiece]], last_move: ChessMove | None = None, is_attacked_fn: Any = None) -> set[tuple[int, int]]:
         moves: set[tuple[int, int]] = set()
-        direction = -1 if self.color == ChessCOlor.WHITE else 1
+        direction = -1 if self.color == ChessColor.WHITE else 1
 
         next_r = self.r + direction
         if 0 <= next_r < 8 and grid[next_r][self.c].is_empty:
@@ -261,7 +263,7 @@ class PawnPiece(ChessPiece):
             start_r = 6 if self.color == ChessColor.WHITE else 1
             two_step = self.r + (2 * direction)
             if self.r == start_r and grid[two_step][self.c].is_empty:
-                moves.add(two_step, self.c)
+                moves.add((two_step, self.c))
 
         for dc in [-1, 1]:
             next_c = self.c + dc

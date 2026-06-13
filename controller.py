@@ -44,7 +44,7 @@ def ChessModel_factory(args: tuple[str, str], view: ChessView) -> ChessModel:
     # player vs ai
     # DISCLAIMER: no names yet huhu
     if opponent == 'enemyai':
-        chess_ai = view.configure_enemy(enemy_chosices)
+        chess_ai = view.configure_enemy(enemy_choices)
         if chosen == 'white':
             p1 = ChessPlayer(ChessColor.WHITE, 'p1')
             p2 = chess_ai(ChessColor.BLACK, 'normalai')
@@ -65,6 +65,7 @@ def ChessModel_factory(args: tuple[str, str], view: ChessView) -> ChessModel:
             players = [p2, p1]
 
     p1, p2 = players
+
     return ChessModel(p1, p2, '.', chosen)
 
 class ChessController:
@@ -120,6 +121,6 @@ class ChessController:
                     view.display_board(model.get_view_grid(), model.turn, model.empty)
                     view.display_move(last_move, tr, tc, target, is_capture)
         
-        view.display_winner(model.winner)
-        view.display_grid(model.get_view_grid())
+        view.display_winner(model.winner, model.winner_player)
+        view.display_grid(model.get_view_grid(), model.turn, model.empty)
         view.display_moves_done(model.moves_done)
