@@ -16,7 +16,7 @@ Terminal-Based Chess Game (Python)
 ➤ How to Play
 1. Download all files and run the main file via:
         python main.py -o <enemyai (PvE) or player (PvP)> -t <choose or random>
-    -o (opponent); -t (turn-basis)
+    Note: -o (opponent); -t (turn-basis)
 
 2. Choose a chess piece using the available pieces on your side
     Note: pieces with no valid moves will not be shown
